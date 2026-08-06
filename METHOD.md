@@ -127,3 +127,44 @@ LibriSpeech dummy split under fp32/cpu, fp32/mps and fp16/mps. The check is
 `tests/test_precision.py`. A quantised Whisper KV cache is capable of taking
 this model from 1.91% WER to 100%, so reduced precision here does not get
 taken on trust.
+
+## Attempted follow-up on disordered speech, and why it failed
+
+The stated limitation of the main study is that Common Voice's older speakers
+are self-selected volunteers, so it measures healthy aging rather than clinical
+aging. The obvious next step is to run the endpoint metric on disordered
+speech, and the endpoint metric needs only audio, no reference transcript,
+which should make that easy.
+
+It is not easy, for two separate reasons.
+
+**Licensing.** TORGO and UASpeech both require signed research agreements. Both
+are mirrored on HuggingFace by third parties, several without a license field
+or marked "other". Those mirrors appear to redistribute outside the original
+terms, so this project does not use them. The Speech Accessibility Project
+corpus is the right instrument and requires an application.
+
+**The openly licensed option is unsuitable, which took measurement to
+establish.** SEP-28k (CC-BY-NC) is Apple's stuttering-events dataset and looks
+ideal: stuttering blocks are literally mid-utterance pauses. The redistributed
+version carries 1,000 balanced clips with audio.
+
+Running the metric on it produces a cutoff rate of 58.0% for fluent and 65.6%
+for stuttered speech at a 400ms threshold, against 8.0% for twenty-somethings
+on Common Voice. That gap is not a finding about stuttering. Every clip is
+exactly 3.00 seconds, and **74.3% begin mid-speech while 70.8% end
+mid-speech**: they are fixed windows cut from continuous podcast audio, not
+complete utterances. The metric is therefore counting clause boundaries and
+arbitrary cuts, not pauses a speaker chose to take inside a turn.
+
+The redistribution also strips episode and speaker identifiers, so the
+speaker-level bootstrap used everywhere else in this project is impossible and
+any interval would be optimistic.
+
+The difference between groups was +7.6pp at 400ms and not distinguishable from
+zero at 700ms. It is not reported as a result because the instrument does not
+measure the intended quantity on this data.
+
+**What the follow-up actually needs:** complete utterances, speaker
+identifiers, and a license that permits the work. That is the Speech
+Accessibility Project or FluencyBank, both by application.
