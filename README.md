@@ -5,7 +5,8 @@ speech recognition will not hear them. **That assumption is wrong, and it is
 hiding the failure that is actually happening.**
 
 Measured on 2,760 Common Voice clips, matched between age brackets on accent,
-gender and speaker so the only thing varying is age:
+gender and speaker so the only thing varying is age, and checked against a
+second 3,189-clip draw that controls for none of it:
 
 ```
                  word error rate          premature cutoff (700 ms)
@@ -82,21 +83,70 @@ seventies and their intervals overlap. This reads as an effect that arrives by
 60 and plateaus, not a straight line, and it is drawn that way rather than
 smoothed.
 
-## 3. The obvious version of this benchmark gives the opposite answer
+The eighties, run separately because matching against them would have shrunk
+every bracket eightfold, are the sharpest case. Only 14 speakers exist, so the
+intervals are wide — and the effect clears them anyway:
+
+```
+threshold   twenties   eighties   difference [95% CI]
+    400ms      27.9%      49.2%   +21.8% [+6.3%, +36.6%]
+    500ms      15.6%      40.2%   +24.8% [+8.9%, +38.7%]
+    700ms       4.1%      22.1%   +18.1% [+7.9%, +27.2%]
+   1000ms       0.0%       6.6%    +6.5% [+1.7%, +14.5%]
+```
+
+At 700 ms that is a 5.4x gap. Their WER, meanwhile, is 6.24% against 6.01% —
+a difference of +0.15pp whose interval comfortably includes zero. **The two
+findings diverge further with age**: recognition stays flat while turn-taking
+gets steadily worse.
+
+**The result survives a re-draw.** Running the whole benchmark again without
+accent matching — 3,189 clips, 1,434 speakers, 30 accents instead of 8 —
+reproduces the cutoff rates almost exactly:
+
+```
+                twenties   sixties   seventies
+matched             8.0%     19.7%       16.6%
+unmatched           7.5%     19.3%       16.6%
+```
+
+This is a re-draw from one corpus, not an independent replication: the two
+samples share 52% of their speakers, though only 18% of their clips. It shows
+the numbers are not an artifact of one particular draw or of the accent
+matching. It does not show they generalise beyond Common Voice.
+
+## 3. The accent confound is real, and it does not drive the result
 
 Common Voice is globally crowdsourced and its younger contributors skew
 non-native. The twenties bracket is 11.9% India-and-South-Asia English and
 46.9% native anglophone; the sixties are 64.4%. Whisper is worse on non-native
-English, so an age comparison that ignores accent reports *younger* speakers as
-harder to transcribe — and an early run of this benchmark did exactly that.
+English, so age and accent are genuinely entangled in this corpus, and an
+uncontrolled comparison has an obvious alternative explanation.
 
-Filtering to native varieties is not enough either. Inside that stratum the
-twenties are 64.5% United States English against 35.9% for the eighties, with
-Australian English at 5.0% against 21.9%: a 28.6 point swing.
+Brackets are therefore matched on the (accent, gender) pair, holding both
+identical by construction: 920 clips per bracket, 8 accents, 392/528
+male/female **in every bracket**.
 
-So brackets are matched on the (accent, gender) pair, holding both identical by
-construction. The published sample is 920 clips per bracket, 8 accents, and
-392/528 male/female **in every bracket**.
+**I expected that to change the answer. It does not.** Running the benchmark
+both ways, on samples whose accent composition could hardly be more different:
+
+```
+                   matched            unmatched
+                (8 accents,         (30/15/13 accents,
+              identical mix)         differing mix)
+twenties          6.53%                 6.60%
+sixties           5.23%                 4.90%
+seventies         4.67%                 5.11%
+```
+
+The largest disagreement is 0.44pp. Both arms put the sixties and seventies
+below the twenties, and in both the difference excludes zero. Matching is still
+the right thing to do — it removes a live alternative explanation and it makes
+the trend monotonic — but the finding does not rest on it.
+
+This section originally claimed the opposite, on the strength of a 40-clip
+pilot in which the twenties scored 10.54%. At full sample that figure is 6.60%.
+The pilot was noise and the story built on it was wrong.
 
 ## 4. What this can and cannot claim
 
@@ -116,9 +166,9 @@ Two narrower limits. Read speech is not conversational speech, and someone
 reading a prompt pauses differently than someone answering a question — though
 that cuts against finding 2 being an artifact, since read speech should if
 anything *understate* natural pausing. And the eighties bracket has 27 speakers
-in the entire split, so it is reported separately and marked underpowered
-rather than folded into the main comparison, where matching against it would
-have shrunk every bracket eightfold.
+in the entire split, so it is reported separately rather than folded into the
+main comparison, where matching against it would have shrunk every bracket
+eightfold. Its intervals are correspondingly wide.
 
 ## 5. Confounds that were checked and came back clean
 
