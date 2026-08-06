@@ -1,0 +1,20 @@
+[project]
+name = "agegap"
+version = "0.1.0"
+description = "Word error rate and endpoint safety by speaker age, on wideband and simulated telephony"
+requires-python = ">=3.10"
+dependencies = [
+  "torch", "transformers", "huggingface_hub",
+  "jiwer", "numpy", "scipy", "soundfile", "webrtcvad-wheels",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+markers = ["slow: downloads a model and decodes real audio"]
+addopts = "-m 'not slow'"
