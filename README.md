@@ -1,33 +1,61 @@
 # asr-age-gap
 
-Voice agents are being pointed at elderly callers, and the assumed risk is that
-speech recognition will not hear them. **That assumption is wrong, and it is
-hiding the failure that is actually happening.**
+I thought speech recognition would be worse for old people. I measured it. It's better.
 
-Measured on 2,760 Common Voice clips, matched between age brackets on accent,
-gender and speaker so the only thing varying is age, and checked against a
-second 3,189-clip draw that controls for none of it:
+Then I looked for where the real problem is, and found it in when the computer
+decides you've stopped talking.
+
+## The two numbers
+
+I took 2,760 clips from Common Voice. I matched the age groups on accent,
+gender and speaker, so age is the only thing that differs between them.
 
 ```
-                 word error rate          premature cutoff (700 ms)
-twenties   n=920      6.53%                        8.0%
-sixties    n=920      5.23%   -1.31pp *           19.7%   +11.6pp *
-seventies  n=920      4.67%   -1.86pp *           16.6%    +8.5pp *
-
-* speaker-bootstrapped 95% interval excludes zero
+             word errors        cut off mid-sentence
+             (lower better)     (at a 700ms pause)
+twenties         6.53%                 8.0%
+sixties          5.23%                19.7%
+seventies        4.67%                16.6%
 ```
 
-**Whisper transcribes older speakers more accurately, not less.** And where a
-stack endpoints on a fixed silence threshold, those same speakers get talked
-over two to two and a half times as often.
+**Left column:** Whisper makes fewer mistakes on people in their seventies than
+on people in their twenties. That surprised me, so I checked it on a second
+model built a completely different way, and got the same answer.
 
-That second finding has a caveat that arrived after publication and is worth
-reading before quoting the number: **a semantic turn model closes most of the
-gap.** Measured against Pipecat's smart-turn v3 on the same clips, +11.6pp
-becomes +5.9pp and stops excluding zero (section 3). The fixed-threshold result
-describes a real and common configuration, not every configuration.
+**Right column:** older people pause more in the middle of a sentence. A voice
+assistant waits for silence to decide your turn is over. Longer pauses mean it
+cuts you off. At a 700ms wait, it happens to 8% of sentences from
+twenty-somethings and 20% from people in their sixties.
 
-`python3 bench/run.py` reproduces both. No API key, no spend.
+Word error rate can't see that second problem at all. The words that get
+through are transcribed fine. The caller just gets interrupted.
+
+## One important correction
+
+A maintainer at Daily/Pipecat, Mark Backman, told me that real voice products
+don't use a plain silence timer any more. He's right. Their default is a model
+that listens to your voice and decides if you sound finished.
+
+So I tested that model too. It cuts the gap roughly in half, to the point where
+I can no longer tell it apart from zero. Details in section 3.
+
+So: if your product waits a fixed amount of silence, the problem is real. If it
+uses a smarter turn detector, most of it goes away.
+
+## Run it
+
+```bash
+python3 bench/run.py
+```
+
+No API key. No paid services. Everything downloads from public data and runs on
+your machine.
+
+---
+
+The rest of this file is the detail: how I controlled for things that could
+have faked the result, three mistakes I made and caught, and what this does not
+prove.
 
 ## 1. The recognition penalty is not there
 
