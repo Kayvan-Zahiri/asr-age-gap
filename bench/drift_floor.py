@@ -3,7 +3,7 @@
     python3 bench/drift_floor.py
 
 Several companies now sell daily phone check-ins for older adults that claim to
-flag cognitive decline from "voice biomarkers" — speech rate, pause structure,
+flag cognitive decline from "voice biomarkers": speech rate, pause structure,
 response latency. One cites 70-90% sensitivity. None publish a validation.
 
 Validating the clinical claim needs DementiaBank or ADReSS, which are gated.

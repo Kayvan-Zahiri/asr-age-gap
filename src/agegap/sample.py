@@ -138,15 +138,15 @@ def match_accents(chosen: list[Clip], brackets: tuple[str, ...]) -> list[Clip]:
 
     Restricting to native-anglophone varieties is not enough on its own. Inside
     that stratum the twenties are 64.5% United States English and the eighties
-    35.9%, with Australian English running 5.0% against 21.9% — a 28.6 point
+    35.9%, with Australian English running 5.0% against 21.9%, a 28.6 point
     swing that a bare native/non-native filter leaves untouched.
 
-    Matching is on the (accent, gender) pair rather than accent alone. Matching
-    on accent by itself silently undoes the gender balance ``draw`` established,
-    because taking an accent-wise subset need not preserve the male/female split
-    — one run came out 54/46 in the sixties against 50/50 in the seventies.
-    Keying on the pair costs about 25 clips per bracket and makes both
-    compositions identical by construction rather than approximately equal.
+    Matching is on the (accent, gender) pair, not on accent alone. Matching on
+    accent by itself quietly undoes the gender balance ``draw`` established,
+    because an accent-wise subset need not keep the male/female split. One run
+    came out 54/46 in the sixties against 50/50 in the seventies. Keying on the
+    pair costs about 25 clips per bracket and makes both compositions exactly
+    equal instead of roughly equal.
 
     For each stratum this keeps ``min`` clips across the brackets. The cost is
     sample size, and it is worth paying: an accent difference of that size is
