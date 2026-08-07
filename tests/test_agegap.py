@@ -166,3 +166,38 @@ def test_unpaired_delta_straddles_zero_when_groups_match():
     spk_b = [f"b{i//4}" for i in range(40)]
     _, lo, hi = stats.unpaired_speaker_delta(r, h, spk_a, r, h, spk_b, n=400)
     assert lo <= 0 <= hi
+
+
+# ── drift floor ──────────────────────────────────────────────────────────────
+
+def test_utterances_needed_scales_as_inverse_square_of_effect():
+    """Halving the effect you want to detect quadruples the sample."""
+    import pathlib as _p, sys as _s
+    _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1] / "bench"))
+    from drift_floor import utterances_needed
+    assert utterances_needed(0.18, 0.10) == pytest.approx(
+        4 * utterances_needed(0.18, 0.20), rel=1e-6)
+
+
+def test_noisier_feature_needs_more_samples():
+    """Pause time (CV ~1.0) must cost far more than speech rate (CV ~0.18)."""
+    import pathlib as _p, sys as _s
+    _s.path.insert(0, str(_p.Path(__file__).resolve().parents[1] / "bench"))
+    from drift_floor import utterances_needed
+    rate = utterances_needed(0.18, 0.10)
+    pause = utterances_needed(1.00, 0.10)
+    assert pause > 20 * rate
+
+
+def test_smart_turn_probability_is_not_re_sigmoided():
+    """Regression: the ONNX graph already applies the sigmoid.
+
+    Applying it a second time squashed every clip into a band around 0.73 and
+    produced a 100.0% false-cutoff rate in every bracket, which looked like a
+    finding and was an artifact of the wrapper.
+    """
+    import numpy as _np
+    already_prob = _np.array([0.974, 0.052, 0.201])
+    double = 1.0 / (1.0 + _np.exp(-already_prob))
+    assert double.min() > 0.5, "double sigmoid pushes everything above 0.5"
+    assert (already_prob > 0.5).sum() == 1, "the raw output does discriminate"

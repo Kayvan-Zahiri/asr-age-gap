@@ -17,9 +17,15 @@ seventies  n=920      4.67%   -1.86pp *           16.6%    +8.5pp *
 * speaker-bootstrapped 95% interval excludes zero
 ```
 
-**Whisper transcribes older speakers more accurately, not less.** And at the
-500-800 ms endpoint threshold production voice stacks ship with, those same
-speakers get talked over two to two and a half times as often.
+**Whisper transcribes older speakers more accurately, not less.** And where a
+stack endpoints on a fixed silence threshold, those same speakers get talked
+over two to two and a half times as often.
+
+That second finding has a caveat that arrived after publication and is worth
+reading before quoting the number: **a semantic turn model closes most of the
+gap.** Measured against Pipecat's smart-turn v3 on the same clips, +11.6pp
+becomes +5.9pp and stops excluding zero (section 3). The fixed-threshold result
+describes a real and common configuration, not every configuration.
 
 `python3 bench/run.py` reproduces both. No API key, no spend.
 
@@ -45,6 +51,22 @@ seventies    3.67%    0.41%    0.59%
 
 Deletions in particular do *not* rise, which is the result you would expect if
 quiet or breathy speech were being dropped. It is not being dropped.
+
+**It is not a Whisper artifact.** The obvious objection is that Whisper's
+decoder is a language model, so it might be repairing older speakers' word
+choices rather than hearing them better. So the same clips were re-run through
+wav2vec2, which is pure CTC: frame-wise, greedy, no decoder and no implicit LM.
+
+```
+bracket      Whisper enc-dec        wav2vec2 CTC
+twenties           6.53%               14.23%
+sixties            5.23%  -1.31pp      10.30%  -3.94pp [-5.52,-2.40]
+seventies          4.67%  -1.86pp      10.52%  -3.72pp [-5.49,-2.08]
+```
+
+Absolute WER is much higher for wav2vec2 (LibriSpeech-only training, no LM), so
+only the between-bracket comparison transfers. The effect is *larger* there and
+still excludes zero, which puts it in the acoustics rather than in a decoder.
 
 ## 2. The turn-taking penalty is large
 
@@ -115,7 +137,83 @@ samples share 52% of their speakers, though only 18% of their clips. It shows
 the numbers are not an artifact of one particular draw or of the accent
 matching. It does not show they generalise beyond Common Voice.
 
-## 3. The accent confound is real, and it does not drive the result
+## 3. A semantic turn model closes most of the gap
+
+Mark Backman of Daily/Pipecat read an earlier version of this and pointed out
+that it described the wrong thing: production stacks do not endpoint on a fixed
+VAD threshold. Pipecat's default is
+[smart-turn](https://github.com/pipecat-ai/smart-turn), a semantic model that
+listens to the waveform and grants more time when the turn sounds unfinished.
+
+He is right, so smart-turn v3 was measured on the identical sample. For each
+clip, the audio *up to* an internal pause is fed to the model and it is asked
+whether the turn is complete. The speaker demonstrably continues, so
+"complete" is a false cutoff.
+
+```
+                fixed 700ms threshold      smart-turn v3
+twenties               8.0%                     75.6%
+sixties               19.7%  +11.6pp *          81.6%   +5.9pp [-0.9,+12.9]
+seventies             16.6%   +8.5pp *          79.7%   +4.0pp [-3.6,+11.6]
+```
+
+The gap roughly halves and stops excluding zero. Positive control on whole
+utterances is flat at 90-91% across brackets.
+
+Two things this does **not** say. The absolute 76-82% rate is not an error
+rate: many internal pauses are legitimate clause boundaries where a turn could
+plausibly end, and without human labels on which prefixes sound complete, only
+the between-bracket comparison is interpretable. And "includes zero" is not
+"no effect" — both point estimates stay positive, and 86 seventies speakers
+cannot resolve four points either way.
+
+The practical reading: if you endpoint on a fixed threshold, the age gap is
+real and large. If you use a semantic turn model, most of it goes away. The
+published smart-turn benchmark stratifies 31,527 samples across 23 languages
+but not by speaker age, and its training mix leans on synthetic TTS, which does
+not pause the way an eighty-year-old does.
+
+## 4. What a person's own speech noise costs a drift detector
+
+Several products now offer daily phone check-ins for older adults that claim to
+flag cognitive decline from voice biomarkers. Validating that needs gated
+clinical corpora. But a prior question needs no clinical labels and bounds the
+claim from below: **how much does one healthy person's speech vary between
+utterances?** A drift detector can only see change that clears the speaker's
+own noise.
+
+Measured on 36 speakers with 40+ clips each:
+
+```
+feature                        within-speaker CV
+speech rate                          ~18%
+utterance duration                   ~23%
+number of internal pauses            ~76%
+total pause time                   ~96-111%
+```
+
+Converted to the sample needed to resolve a 10% change at 80% power:
+
+```
+feature                  utterances    calls @40/call
+speech rate                      25          0.6
+utterance duration               41          1.0
+number of internal pauses       447         11
+total pause time                758         19
+```
+
+Pause features — the most frequently cited voice biomarker — vary by about
+100% within the same speaker, often within one sitting. Detecting a 10% shift
+in total pause time takes roughly three weeks of daily calls *per reading*, so
+a "six-week trend" is two or three noisy measurements. Speech rate and duration
+are comfortably usable.
+
+Both directions of error are stated: Common Voice clips from one contributor
+are often a single sitting, so real day-to-day variance is larger; and
+utterances within one call are correlated, so dividing by 40 overstates the
+effective sample. Both push the true requirement up. **These are floors.**
+
+## 5. The accent confound is real, and it does not drive the result
 
 Common Voice is globally crowdsourced and its younger contributors skew
 non-native. The twenties bracket is 11.9% India-and-South-Asia English and
@@ -148,7 +246,7 @@ This section originally claimed the opposite, on the strength of a 40-clip
 pilot in which the twenties scored 10.54%. At full sample that figure is 6.60%.
 The pilot was noise and the story built on it was wrong.
 
-## 4. What this can and cannot claim
+## 6. What this can and cannot claim
 
 **Common Voice's older speakers are volunteers.** They chose to sit down at a
 computer and record themselves for Mozilla. They are tech-comfortable and
@@ -170,7 +268,7 @@ in the entire split, so it is reported separately rather than folded into the
 main comparison, where matching against it would have shrunk every bracket
 eightfold. Its intervals are correspondingly wide.
 
-## 5. Confounds that were checked and came back clean
+## 7. Confounds that were checked and came back clean
 
 Reported because a reader will ask, not because they changed anything.
 
@@ -194,7 +292,7 @@ Reported because a reader will ask, not because they changed anything.
   half of all 60+ audio in the split comes from about seven people. Capped at
   25 clips per speaker, and all intervals resample speakers rather than clips.
 
-## 6. Three bugs the harness caught in itself
+## 8. Bugs the harness caught in itself
 
 **The endpoint finding was nearly an artifact.** A relative-energy VAD reported
 the eighties being cut off at 42.9%. WebRTC VAD — what production stacks
@@ -245,4 +343,7 @@ impossible in this corpus.
 | `src/agegap/asr.py` | Whisper adapter, device and precision selection |
 | `bench/run.py` | the run: chunked, checkpointed, fail-closed |
 | `bench/analyze.py` | the tables above, plus the controlled/uncontrolled contrast |
-| `tests/` | 23 tests, including one per bug in section 6 |
+| `bench/replicate_ctc.py` | the wav2vec2 architecture control |
+| `bench/smart_turn_eval.py` | Pipecat smart-turn v3 on the same age-matched clips |
+| `bench/drift_floor.py` | within-speaker noise, and what it costs a drift detector |
+| `tests/` | 26 tests, including one per bug in section 8 |

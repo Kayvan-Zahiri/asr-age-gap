@@ -92,3 +92,51 @@ class Whisper:
             torch.mps.empty_cache()
         elif self.device == "cuda":
             torch.cuda.empty_cache()
+
+
+class Wav2Vec2:
+    """A CTC recognizer, as an architectural control on the Whisper result.
+
+    Whisper is an encoder-decoder model whose decoder is a language model, so
+    it can repair a mangled acoustic frame from context. wav2vec2 is pure CTC:
+    frame-wise, greedy, no decoder and no implicit LM. If the age effect
+    appears in both, it cannot be an artifact of Whisper's decoder, which is
+    the first thing anyone should suspect about a result showing older speakers
+    are *easier* to transcribe.
+
+    Absolute WER is much higher here (LibriSpeech-only training, no LM). Only
+    the between-bracket comparison is meaningful.
+    """
+
+    def __init__(self, name: str = "facebook/wav2vec2-large-960h-lv60-self",
+                 device: str | None = None):
+        from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
+
+        auto_dev, _ = pick_device()
+        self.device = device or auto_dev
+        self.dtype = torch.float32          # CTC in fp16 on MPS is not worth the risk
+        self.name = name
+        self.processor = Wav2Vec2Processor.from_pretrained(name)
+        self.model = Wav2Vec2ForCTC.from_pretrained(name).to(self.device).eval()
+
+    def transcribe(self, clips: list[np.ndarray], *, batch_size: int = 8,
+                   **_) -> list[str]:
+        out: list[str] = []
+        for i in range(0, len(clips), batch_size):
+            batch = clips[i:i + batch_size]
+            inp = self.processor(batch, sampling_rate=16_000, return_tensors="pt",
+                                 padding=True)
+            vals = inp.input_values.to(self.device, self.dtype)
+            mask = getattr(inp, "attention_mask", None)
+            with torch.no_grad():
+                logits = self.model(
+                    vals, attention_mask=mask.to(self.device) if mask is not None else None
+                ).logits
+            ids = torch.argmax(logits, dim=-1)
+            out.extend(self.processor.batch_decode(ids))
+        return out
+
+    def release(self) -> None:
+        del self.model
+        if self.device == "mps":
+            torch.mps.empty_cache()
