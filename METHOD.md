@@ -74,7 +74,7 @@ transcribe and would have been reported as a finding.
 
 Restricting to native varieties is not sufficient either. Inside that stratum
 the twenties are 64.5% United States English and the eighties 35.9%, with
-Australian English at 5.0% against 21.9% — a 28.6 point swing. So
+Australian English at 5.0% against 21.9%, a 28.6 point swing. So
 `match_accents` keeps, for each accent, the same number of clips in every
 bracket, making the composition identical by construction.
 
@@ -101,7 +101,7 @@ Checked, found clean, reported anyway because a reader will ask.
 Common Voice is 48 kHz into a laptop microphone. The companies this benchmark
 is aimed at run 8 kHz phone calls. Scoring only wideband audio answers a
 question they are not asking, so every clip is scored twice: as recorded, and
-through a simulated G.711 channel — band-limited to 300-3400 Hz, decimated to
+through a simulated G.711 channel: band-limited to 300-3400 Hz, decimated to
 8 kHz, mu-law companded to 8 bits, and resampled back to 16 kHz for the model.
 Optional 20 ms packet dropping models a jitter buffer.
 

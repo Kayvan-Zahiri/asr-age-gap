@@ -129,13 +129,12 @@ seventies            2.20           2.0        420 ms
 ```
 
 **It is not a clean gradient.** The sixties are cut off slightly more than the
-seventies and their intervals overlap. This reads as an effect that arrives by
-60 and plateaus, not a straight line, and it is drawn that way rather than
-smoothed.
+seventies and their intervals overlap. So the effect looks like it arrives by 60 and then levels off. It is drawn
+that way here instead of as a straight line.
 
 The eighties, run separately because matching against them would have shrunk
 every bracket eightfold, are the sharpest case. Only 14 speakers exist, so the
-intervals are wide — and the effect clears them anyway:
+intervals are wide. The effect clears them anyway:
 
 ```
 threshold   twenties   eighties   difference [95% CI]
@@ -145,13 +144,13 @@ threshold   twenties   eighties   difference [95% CI]
    1000ms       0.0%       6.6%    +6.5% [+1.7%, +14.5%]
 ```
 
-At 700 ms that is a 5.4x gap. Their WER, meanwhile, is 6.24% against 6.01% —
+At 700 ms that is a 5.4x gap. Their WER, meanwhile, is 6.24% against 6.01%,
 a difference of +0.15pp whose interval comfortably includes zero. **The two
 findings diverge further with age**: recognition stays flat while turn-taking
 gets steadily worse.
 
-**The result survives a re-draw.** Running the whole benchmark again without
-accent matching — 3,189 clips, 1,434 speakers, 30 accents instead of 8 —
+**It survives a re-draw.** Running the whole benchmark again without
+accent matching, on 3,189 clips from 1,434 speakers with 30 accents,
 reproduces the cutoff rates almost exactly:
 
 ```
@@ -188,11 +187,11 @@ seventies             16.6%   +8.5pp *          79.7%   +4.0pp [-3.6,+11.6]
 The gap roughly halves and stops excluding zero. Positive control on whole
 utterances is flat at 90-91% across brackets.
 
-Two things this does **not** say. The absolute 76-82% rate is not an error
+Two things this does not say. The absolute 76-82% rate is not an error
 rate: many internal pauses are legitimate clause boundaries where a turn could
 plausibly end, and without human labels on which prefixes sound complete, only
 the between-bracket comparison is interpretable. And "includes zero" is not
-"no effect" — both point estimates stay positive, and 86 seventies speakers
+"no effect". Both point estimates stay positive, and 86 seventies speakers
 cannot resolve four points either way.
 
 The practical reading: if you endpoint on a fixed threshold, the age gap is
@@ -230,7 +229,7 @@ number of internal pauses       447         11
 total pause time                758         19
 ```
 
-Pause features — the most frequently cited voice biomarker — vary by about
+Pause features, the most frequently cited voice biomarker, vary by about
 100% within the same speaker, often within one sitting. Detecting a 10% shift
 in total pause time takes roughly three weeks of daily calls *per reading*, so
 a "six-week trend" is two or three noisy measurements. Speech rate and duration
@@ -267,8 +266,8 @@ seventies         4.67%                 5.11%
 
 The largest disagreement is 0.44pp. Both arms put the sixties and seventies
 below the twenties, and in both the difference excludes zero. Matching is still
-the right thing to do — it removes a live alternative explanation and it makes
-the trend monotonic — but the finding does not rest on it.
+the right thing to do. It removes a live alternative explanation and makes
+the trend monotonic. But the finding does not rest on it.
 
 This section originally claimed the opposite, on the strength of a 40-clip
 pilot in which the twenties scored 10.54%. At full sample that figure is 6.60%.
@@ -289,7 +288,7 @@ supported here. A follow-up on a disordered-speech corpus is the honest next
 step.
 
 Two narrower limits. Read speech is not conversational speech, and someone
-reading a prompt pauses differently than someone answering a question — though
+reading a prompt pauses differently than someone answering a question. Though
 that cuts against finding 2 being an artifact, since read speech should if
 anything *understate* natural pausing. And the eighties bracket has 27 speakers
 in the entire split, so it is reported separately rather than folded into the
@@ -298,13 +297,13 @@ eightfold. Its intervals are correspondingly wide.
 
 ## 7. Confounds that were checked and came back clean
 
-Reported because a reader will ask, not because they changed anything.
+None of these changed the result. They are here because a reader will ask.
 
 - **Recording quality.** Median SNR 53.2 / 55.7 / 55.9 dB across brackets. No
   equipment disadvantage, so the WER result is not a microphone result.
 - **Sentence length.** Median 11 words for the twenties and sixties, 10 for the
-  seventies. Short utterances are genuinely harder here — 7.72% WER at 1-7
-  words against 4.24% at 14+ — so the seventies carry the *harder* sentences,
+  seventies. Short utterances are harder here: 7.72% WER at 1-7
+  words against 4.24% at 14+. So the seventies carry the *harder* sentences,
   and the effect survives holding length fixed:
 
   ```
@@ -323,8 +322,8 @@ Reported because a reader will ask, not because they changed anything.
 ## 8. Bugs the harness caught in itself
 
 **The endpoint finding was nearly an artifact.** A relative-energy VAD reported
-the eighties being cut off at 42.9%. WebRTC VAD — what production stacks
-actually run — disagreed on 36% of those clips and put the median longest pause
+the eighties being cut off at 42.9%. WebRTC VAD, which is what production stacks
+actually run, disagreed on 36% of those clips and put the median longest pause
 at 345 ms where the energy detector said 662 ms. Breathy trailing-off speech
 falls under an energy floor, and older speech is exactly what is breathy, so
 the cheap detector's error was correlated with the variable under study. WebRTC
