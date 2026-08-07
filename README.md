@@ -11,8 +11,8 @@ I took 2,760 clips from Common Voice. I matched the age groups on accent,
 gender and speaker, so age is the only thing that differs between them.
 
 ```
-             word errors        cut off mid-sentence
-             (lower better)     (at a 700ms pause)
+             word errors      pauses long enough to
+             (lower better)   look like "I'm done" (700ms)
 twenties         6.53%                 8.0%
 sixties          5.23%                19.7%
 seventies        4.67%                16.6%
@@ -23,12 +23,12 @@ on people in their twenties. That surprised me, so I checked it on a second
 model built a completely different way, and got the same answer.
 
 **Right column:** older people pause more in the middle of a sentence. A voice
-assistant waits for silence to decide your turn is over. Longer pauses mean it
-cuts you off. At a 700ms wait, it happens to 8% of sentences from
-twenty-somethings and 20% from people in their sixties.
+assistant that waits a fixed amount of silence reads a long pause as the end of
+your turn. At a 700ms wait, 8% of sentences from twenty-somethings contain a
+pause that long, against 20% from people in their sixties.
 
-Word error rate can't see that second problem at all. The words that get
-through are transcribed fine. The caller just gets interrupted.
+Word error rate can't see that at all. The words that get through are
+transcribed fine.
 
 ## One important correction
 
@@ -37,10 +37,13 @@ don't use a plain silence timer any more. He's right. Their default is a model
 that listens to your voice and decides if you sound finished.
 
 So I tested that model too. It cuts the gap roughly in half, to the point where
-I can no longer tell it apart from zero. Details in section 3.
+I can no longer tell it apart from zero.
 
-So: if your product waits a fixed amount of silence, the problem is real. If it
-uses a smarter turn detector, most of it goes away.
+He then made a second point I want to be upfront about: that model is one part
+of a larger system, and the system doesn't act on its verdict alone. If you
+start talking again, your turn stays open. So my test says something about the
+component, not about how often a real product interrupts you. Section 3 spells
+out the difference.
 
 ## Run it
 
@@ -129,8 +132,8 @@ seventies            2.20           2.0        420 ms
 ```
 
 **It is not a clean gradient.** The sixties are cut off slightly more than the
-seventies and their intervals overlap. So the effect looks like it arrives by 60 and then levels off. It is drawn
-that way here instead of as a straight line.
+seventies and their intervals overlap. So the effect looks like it arrives by
+60 and then levels off. It is drawn that way here, not as a straight line.
 
 The eighties, run separately because matching against them would have shrunk
 every bracket eightfold, are the sharpest case. Only 14 speakers exist, so the
@@ -173,12 +176,11 @@ VAD threshold. Pipecat's default is
 listens to the waveform and grants more time when the turn sounds unfinished.
 
 He is right, so smart-turn v3 was measured on the identical sample. For each
-clip, the audio *up to* an internal pause is fed to the model and it is asked
-whether the turn is complete. The speaker demonstrably continues, so
-"complete" is a false cutoff.
+clip, the audio up to an internal pause is fed to the model, and the model is
+asked whether the turn is complete.
 
 ```
-                fixed 700ms threshold      smart-turn v3
+                fixed 700ms threshold      smart-turn v3 verdict
 twenties               8.0%                     75.6%
 sixties               19.7%  +11.6pp *          81.6%   +5.9pp [-0.9,+12.9]
 seventies             16.6%   +8.5pp *          79.7%   +4.0pp [-3.6,+11.6]
@@ -187,18 +189,30 @@ seventies             16.6%   +8.5pp *          79.7%   +4.0pp [-3.6,+11.6]
 The gap roughly halves and stops excluding zero. Positive control on whole
 utterances is flat at 90-91% across brackets.
 
-Two things this does not say. The absolute 76-82% rate is not an error
-rate: many internal pauses are legitimate clause boundaries where a turn could
-plausibly end, and without human labels on which prefixes sound complete, only
-the between-bracket comparison is interpretable. And "includes zero" is not
-"no effect". Both point estimates stay positive, and 86 seventies speakers
-cannot resolve four points either way.
+### What this measures, and what it does not
 
-The practical reading: if you endpoint on a fixed threshold, the age gap is
-real and large. If you use a semantic turn model, most of it goes away. The
-published smart-turn benchmark stratifies 31,527 samples across 23 languages
-but not by speaker age, and its training mix leans on synthetic TTS, which does
-not pause the way an eighty-year-old does.
+Mark's second correction, and it matters more than the first: **this is one
+component's verdict, not what a user experiences.** In Pipecat, smart-turn
+votes on each VAD chunk, but the turn system does not act on that vote alone.
+If the speaker starts again, the turn stays open. So a "complete" verdict here
+is not an interruption. Measuring interruptions means running the whole
+pipeline, which this benchmark does not do.
+
+Two smaller limits. The absolute 76-82% figure is not an error rate: plenty of
+internal pauses are ordinary clause boundaries where a turn could reasonably
+end, and with no human labels on which prefixes sound finished, only the
+comparison between brackets carries meaning. And "includes zero" is not "no
+effect". Both point estimates stay positive, and 86 seventies speakers cannot
+settle a four-point difference either way.
+
+So the fair reading is narrow. A fixed silence threshold shows a large, clear
+age gap. Swapping in a semantic model shrinks that gap at the component level.
+Whether a full stack still interrupts older speakers more often is an open
+question, and answering it needs an end-to-end test.
+
+One thing worth flagging either way: the published smart-turn benchmark splits
+31,527 samples across 23 languages but not by speaker age, and its training mix
+leans on synthetic TTS, which does not pause the way an eighty-year-old does.
 
 ## 4. What a person's own speech noise costs a drift detector
 
